@@ -1,0 +1,48 @@
+﻿{
+  "checking": true,
+  "servers": [
+    {
+      "serverDisplayName": "\u30b5\u30fc\u30d0\u30fc\u30bb\u30ec\u30af\u30bf\u30fc",
+      "status": "\u6b63\u5e38\u306b\u7a3c\u50cd<\/font>",
+      "responseStatus": "\u6b63\u5e38<\/font>",
+      "code": "full_normal"
+    },
+    {
+      "serverDisplayName": "\u901a\u5e38(\u5171\u6709\u30fb\u7121\u6599\u7248)\u30ea\u30ec\u30fc\u30b5\u30fc\u30d0\u30fc1 \u5206\u6563\u30ce\u30fc\u30c9 1",
+      "status": "\u6b63\u5e38\u306b\u7a3c\u50cd<\/font>",
+      "responseStatus": "\u6b63\u5e38<\/font>",
+      "code": "full_normal"
+    },
+    {
+      "serverDisplayName": "\u901a\u5e38(\u5171\u6709\u30fb\u7121\u6599\u7248)\u30ea\u30ec\u30fc\u30b5\u30fc\u30d0\u30fc1 \u5206\u6563\u30ce\u30fc\u30c9 2",
+      "status": "\u6b63\u5e38\u306b\u7a3c\u50cd<\/font>",
+      "responseStatus": "\u6b63\u5e38<\/font>",
+      "code": "full_normal"
+    },
+    {
+      "serverDisplayName": "\u901a\u5e38(\u5171\u6709\u30fb\u7121\u6599\u7248)\u30ea\u30ec\u30fc\u30b5\u30fc\u30d0\u30fc1 \u5206\u6563\u30ce\u30fc\u30c9 3",
+      "status": "\u6b63\u5e38\u306b\u7a3c\u50cd<\/font>",
+      "responseStatus": "\u6b63\u5e38<\/font>",
+      "code": "full_normal"
+    },
+    {
+      "serverDisplayName": "\u6709\u6599\u7248\u30ea\u30ec\u30fc\u30b5\u30fc\u30d0\u30fc1 \u5206\u6563\u30ce\u30fc\u30c9 1",
+      "status": "\u6b63\u5e38\u306b\u7a3c\u50cd<\/font>",
+      "responseStatus": "\u6b63\u5e38<\/font>",
+      "code": "full_normal"
+    },
+    {
+      "serverDisplayName": "\u6709\u6599\u7248\u30ea\u30ec\u30fc\u30b5\u30fc\u30d0\u30fc1 \u5206\u6563\u30ce\u30fc\u30c9 2",
+      "status": "\u6b63\u5e38\u306b\u7a3c\u50cd<\/font>",
+      "responseStatus": "\u6b63\u5e38<\/font>",
+      "code": "full_normal"
+    },
+    {
+      "serverDisplayName": "\u6709\u6599\u7248\u30ea\u30ec\u30fc\u30b5\u30fc\u30d0\u30fc1 \u5206\u6563\u30ce\u30fc\u30c9 3",
+      "status": "\u6b63\u5e38\u306b\u7a3c\u50cd<\/font>",
+      "responseStatus": "\u6b63\u5e38<\/font>",
+      "code": "full_normal"
+    }
+  ],
+  "updatedTime": 1602825870281
+}

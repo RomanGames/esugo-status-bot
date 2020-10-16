@@ -1,0 +1,14 @@
+﻿{
+  "name": "eaugo-status-bot",
+  "version": "1.0.0",
+  "description": "えすごリレーサーバー稼働状況確認Bot",
+  "main": "main.js",
+  "dependencies": {
+    "discord.js": "latest"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "start": "node main.js",
+    "test": "node main.js"
+  }
+}
