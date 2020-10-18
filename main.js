@@ -36,7 +36,12 @@ const INFO_MESSAGE =
   ' help" でコマンド一覧を確認できます。\n' +
   "初めは " +
   PREFIX +
-  " channel set で通知チャンネルを登録しないと自動通知はできません。";
+  " channel set で通知チャンネルを登録しないと自動通知はできません。\n" +
+  "\n" +
+  "分からない事がある場合、@RomanGames4543 " +
+  ROMANGAMES_ID +
+  "> かこのBotにDMをしてみてください。\n" +
+  "(BotにDMを送った場合、そのメッセージを転送しているので編集機能は適用されませんのでご注意ください。)";
 
 // Response for Uptime Robot
 const http = require("http");
@@ -64,8 +69,7 @@ http
                   .channels.get(channelID)
                   .sendMessage(
                     boxMessage(
-                      "**えすごさんのリレーサーバーサーバーの最新状態**\n" +
-                        forSend,
+                      "**えすごさんのリレーサーバーの最新状態**\n" + forSend,
                       color
                     )
                   );
@@ -87,7 +91,15 @@ client.on("guildCreate", guild => {
   config[guild.id] = { channels: new Array() };
   fs.writeFileSync(CONFIG_FILEPATH, JSON.stringify(config, null, 2));
   guild.systemChannel.sendMessage(boxMessage(INFO_MESSAGE));
-  sendLog("<@" + ROMANGAMES_ID + "> " + guild.name + " 鯖に入れられました。");
+  sendLog(
+    "<@" +
+      ROMANGAMES_ID +
+      "> " +
+      guild.name +
+      " 鯖に入れられました。\n(オーナー: " +
+      guild.owner.user.tag +
+      ")"
+  );
 });
 
 // @onExit
@@ -102,32 +114,92 @@ client.on("guildDelete", guild => {
 
 // @onMessage
 client.on("message", message => {
-  if (!message.author.bot) {
-    // コマンド
-    // #est 単体
-    if (message.content == PREFIX) {
-      message.channel.sendMessage(boxMessage(INFO_MESSAGE));
-      return;
-    }
-    if (message.content.substr(0, (PREFIX + " ").length) == PREFIX + " ") {
-      if (!INSPECTION) {
-        onCommand(
-          client,
-          message,
-          message.content.substr((PREFIX + " ").length).split(" ")
-        );
-      } else {
-        message.channel.sendMessage(
-          "ただ今点検中ですので、\nしばらくしてからもう一度お試しください。"
-        );
+  if (message.author.id != client.user.id) {
+    if (message.channel instanceof discord.TextChannel) {
+      // コマンド
+      // #est 単体
+      if (message.content == PREFIX) {
+        message.channel.sendMessage(boxMessage(INFO_MESSAGE));
+        return;
       }
-      return;
-    }
+      if (message.content.substr(0, (PREFIX + " ").length) == PREFIX + " ") {
+        if (!INSPECTION) {
+          onCommand(
+            client,
+            message,
+            message.content.substr((PREFIX + " ").length).split(" ")
+          );
+        } else {
+          message.channel.sendMessage(
+            "ただ今点検中ですので、\nしばらくしてからもう一度お試しください。"
+          );
+        }
+        return;
+      }
 
-    message.mentions.users.forEach(user => {
-      if (user.id == client.user.id)
-        message.reply(PREFIX + "を送ってみてください！");
-    });
+      message.mentions.users.forEach(user => {
+        if (user.id == client.user.id)
+          message.reply(
+            PREFIX +
+              "を送ってみてください！\n" +
+              "分からない事があればDMをお願いします。\n" +
+              "(BotにDMを送った場合、そのメッセージを転送しているので編集機能は適用されませんのでご注意ください。)"
+          );
+      });
+    } else {
+      // DM
+      if (message.author.id != ROMANGAMES_ID) {
+        // resive
+        let forSend =
+          "> by @" +
+          message.author.tag +
+          "(<@" +
+          message.author.id +
+          ">)\n" +
+          message.content +
+          "\n";
+        message.attachments.forEach(attachment => {
+          forSend += "\n" + attachment.url;
+        });
+        client.users.get(ROMANGAMES_ID).send(forSend);
+      } else {
+        // send
+        let messages = message.content.split("\n");
+        let forSend = "";
+        for (let i = 1; i < messages.length; i++) forSend += messages[i] + "\n";
+        message.attachments.forEach(attachment => {
+          forSend += "\n" + attachment.url;
+        });
+        let user = client.users.get(messages[0]);
+        if (user != undefined || forSend != "") {
+          user.send(forSend);
+          client.users
+            .get(ROMANGAMES_ID)
+            .send(
+              "@" +
+                user.tag +
+                "(<@" +
+                user.id +
+                ">) に```\n" +
+                forSend +
+                "\n```と送りました。"
+            );
+        } else {
+          if (user != undefined)
+            client.users
+              .get(ROMANGAMES_ID)
+              .send(
+                "\n<@" +
+                  messages[0] +
+                  "> というユーザーは見つかりませんでした。"
+              );
+          if (forSend == "")
+            client.users
+              .get(ROMANGAMES_ID)
+              .send("メッセージ内容が空っぽです。");
+        }
+      }
+    }
   }
 });
 
@@ -177,7 +249,13 @@ function onCommand(client, message, args) {
               message.channel.sendMessage(
                 boxMessage(
                   message.channel.name +
-                    " が通知されるチャンネルに追加されました。"
+                    " が通知されるチャンネルに追加されました。\n" +
+                    "この後このチャンネルで " +
+                    PREFIX +
+                    " channel remove と送ると解除できます。\n" +
+                    "また、 " +
+                    PREFIX +
+                    " channel list で登録しているチャンネル一覧を表示できます。"
                 )
               );
               onPosted((forSend, sendFlag, ragPoint) => {
@@ -195,6 +273,13 @@ function onCommand(client, message, args) {
                   )
                 );
               });
+              sendLog(
+                message.author.tag +
+                  " in " +
+                  message.guild.name +
+                  ": __channel set__ " +
+                  message.channel.name
+              );
             } else {
               message.channel.sendMessage(
                 boxMessage("エラー: このチャンネルは既に登録されています。")
@@ -215,6 +300,13 @@ function onCommand(client, message, args) {
                   message.channel.name +
                     " が通知されるチャンネルから削除されました。"
                 )
+              );
+              sendLog(
+                message.author.tag +
+                  " in " +
+                  message.guild.name +
+                  ": __channel remove__ " +
+                  message.channel.name
               );
             } else {
               message.channel.sendMessage(
@@ -275,6 +367,9 @@ function onCommand(client, message, args) {
               (sendFlag ? "更新がありました。" : "更新はありませんでした。")
           )
         );
+        sendLog(
+          message.author.tag + " in " + message.guild.name + ": __update__"
+        );
       });
       success[0] = true;
       break;
@@ -287,15 +382,52 @@ function onCommand(client, message, args) {
         else if (ragPoint == 3) color = getColor(255, 128, 0);
         else color = getColor(255, 0, 0);
         message.channel.sendMessage(boxMessage(forSend, color));
+        sendLog(
+          message.author.tag + " in " + message.guild.name + ": __send__ "
+        );
       });
       success[0] = true;
+      break;
+    case "notice":
+      if (message.author.id == ROMANGAMES_ID) {
+        success[1] = false;
+        if (args.length > 1) {
+          let forSend = "**お知らせ**";
+          for (let i = 1; i < args.length; i++) forSend += "\n" + args[i];
+          client.guilds.forEach(guild => {
+            guild.systemChannel.sendMessage(boxMessage(forSend));
+          });
+          message.channel.sendMessage(boxMessage(forSend));
+          message.channel.sensMeasage("を送信しました。");
+          success[1] = true;
+        }
+        if (!success[1]) {
+          message.channel.sendMessage(
+            boxMessage(
+              "エラー: noticeコマンドの使い方が間違っています。\n" +
+                "noticeコマンドの使い方:\n" +
+                "  " +
+                PREFIX +
+                " notice <message>"
+            )
+          );
+        }
+        success[0] = true;
+      }
       break;
     case "guilds":
       if (message.author.id == ROMANGAMES_ID) {
         let forSend = "__サーバー一覧__:";
+        let number = 0;
         client.guilds.forEach(guild => {
           forSend +=
-            "\n" + guild.name + " (オーナー: " + guild.owner.user.tag + ")";
+            "\n" +
+            ++number +
+            ". " +
+            guild.name +
+            " (オーナー: " +
+            guild.owner.user.tag +
+            ")";
           if (args[1] == "id") forSend += " id: `" + guild.id + "`";
         });
         message.channel.sendMessage(boxMessage(forSend));
@@ -305,22 +437,34 @@ function onCommand(client, message, args) {
     case "channels":
       if (message.author.id == ROMANGAMES_ID) {
         success[1] = false;
-        if (args.length >= 2) {
+        if (args.length > 1) {
           let guild = client.guilds.get(args[1]);
-          let forSend = "__`" + guild.name + "` のチャンネル一覧__:";
-          guild.channels.forEach(channel => {
-            if (channel.type != "category") {
-              forSend +=
-                "\n<" +
-                channel.parent +
-                "|" +
-                channel.type +
-                "> " +
-                channel.name;
-              if (args[2] == "id") forSend += " id: `" + channel.id + "`";
-            }
-          });
-          message.channel.sendMessage(boxMessage(forSend));
+          if (guild == undefined) {
+            let number = 0;
+            client.guilds.forEach(g => {
+              if (args[1] == "" + ++number) guild = g;
+            });
+            if (guild == undefined)
+              message.channel.sendMessage(
+                args[1] + " のID/番号のサーバーは見つかりませんでした"
+              );
+          }
+          if (guild != undefined) {
+            let forSend = "__`" + guild.name + "` のチャンネル一覧__:";
+            guild.channels.forEach(channel => {
+              if (channel.type != "category") {
+                forSend +=
+                  "\n<" +
+                  channel.parent +
+                  "|" +
+                  channel.type +
+                  "> " +
+                  channel.name;
+                if (args[2] == "id") forSend += " id: `" + channel.id + "`";
+              }
+            });
+            message.channel.sendMessage(boxMessage(forSend));
+          }
           success[1] = true;
         }
         if (!success[1]) {
@@ -342,22 +486,31 @@ function onCommand(client, message, args) {
         success[1] = false;
         if (args.length >= 2) {
           let guild = client.guilds.get(args[1]);
-          let forSend = "__`" + guild.name + "` のメンバー一覧__:";
-          guild.members.forEach(member => {
-            forSend +=
-              "\n<"
-            if (member.roles.size > 1) {
-              member.roles.forEach(role => {
-                if (role.name != "@everyone") forSend += role.name + ",";
-              });
-              forSend = forSend.slice(0, -1);
-            }
-            forSend +=
-              "> " +
-              member.user.tag;
-            if (args[2] == "id") forSend += " id: `" + member.user.id + "`"
-          });
-          message.channel.sendMessage(boxMessage(forSend));
+          if (guild == undefined) {
+            let number = 0;
+            client.guilds.forEach(g => {
+              if (args[1] == "" + ++number) guild = g;
+            });
+            if (guild == undefined)
+              message.channel.sendMessage(
+                args[1] + " のID/番号のサーバーは見つかりませんでした"
+              );
+          }
+          if (guild != undefined) {
+            let forSend = "__`" + guild.name + "` のメンバー一覧__:";
+            guild.members.forEach(member => {
+              forSend += "\n<";
+              if (member.roles.size > 1) {
+                member.roles.forEach(role => {
+                  if (role.name != "@everyone") forSend += role.name + ",";
+                });
+                forSend = forSend.slice(0, -1);
+              }
+              forSend += "> " + member.user.tag;
+              if (args[2] == "id") forSend += " id: `" + member.user.id + "`";
+            });
+            message.channel.sendMessage(boxMessage(forSend));
+          }
           success[1] = true;
         }
         if (!success[1]) {
@@ -394,6 +547,14 @@ function onCommand(client, message, args) {
               for (let i = 2; i < args.length; i++) {
                 forConfig += args[i] + " ";
               }
+              message.channel.sendMessage(
+                "__元のconfig__:\n" +
+                  JSON.stringify(
+                    JSON.parse(fs.readFileSync(CONFIG_FILEPATH)),
+                    null,
+                    2
+                  )
+              );
               fs.writeFileSync(CONFIG_FILEPATH, forConfig);
               message.channel.sendMessage("設定完了");
               success[1] = true;
