@@ -1,12 +1,18 @@
-﻿// Response for Uptime Robot
-const http = require("http");
-http
-  .createServer(function(request, response) {
-    response.writeHead(200, { "Content-Type": "text/plain" });
-    response.end("Discord bot is active now \n");
-    onPosted();
-  })
-  .listen(3000);
+/*
+ * えすごさんのリレーサーバーの状態を
+ * 自動で教えてくれるDiscordBot
+ * esugo-status-bot (on discord)
+ */
+
+// require
+
+// file
+const fs = require("fs");
+
+// http
+const https = require("https");
+const url = require("url");
+const request = require("request");
 
 // Discord bot implements
 const discord = require("discord.js");
@@ -14,15 +20,61 @@ const client = new discord.Client();
 
 // const data
 const PREFIX = "#est";
+const INSPECTION = false;
+const CONFIG_FILEPATH = "./config.json";
 const ROMANGAMES_ID = "498452350663655424";
-const INFO_MESSAGE = (
+const INFO_MESSAGE =
   "こんにちは、えすごリレーサーバー稼働状況確認Botです。\n" +
-    "このBotは非公式で、@RomanGames#4543 が作成しました。\n" +
-    "\n" +
-    "このBotは一定時間毎にリレーサーバーの状況を調べて教えてくれるBotです。\n" +
-    "またコマンドもいくつか用意してあります。\n" +
-    '"' + PREFIX + ' help" でコマンド一覧を確認できます。'
-);
+  "このBotは非公式で、@RomanGames#4543 <@" +
+  ROMANGAMES_ID +
+  "> が作成しました。\n" +
+  "\n" +
+  "このBotは一定時間毎にえすごさんのリレーサーバーの状況を調べて教えてくれるBotです。\n" +
+  "またコマンドもいくつか用意してあります。\n" +
+  '"' +
+  PREFIX +
+  ' help" でコマンド一覧を確認できます。\n' +
+  "初めは " +
+  PREFIX +
+  " channel set で通知チャンネルを登録しないと自動通知はできません。";
+
+// Response for Uptime Robot
+const http = require("http");
+http
+  .createServer(function(request, response) {
+    response.writeHead(200, { "Content-Type": "text/plain" });
+    response.end("Discord bot is active now \n");
+    onPosted((forSend, sendFlag, ragPoint) => {
+      if (sendFlag && !INSPECTION) {
+        let color;
+        if (ragPoint == 0) color = getColor(255, 255, 255);
+        else if (ragPoint == 1) color = getColor(255, 255, 128);
+        else if (ragPoint == 2) color = getColor(255, 255, 0);
+        else if (ragPoint == 3) color = getColor(255, 128, 0);
+        else color = getColor(255, 0, 0);
+        let config = JSON.parse(fs.readFileSync(CONFIG_FILEPATH, "utf8"));
+        // 全てサーバーの
+        if (Object.keys(config) != undefined)
+          Object.keys(config).forEach(guildID => {
+            // 全てのチャンネルで
+            if (config[guildID]["channels"] != undefined)
+              config[guildID]["channels"].forEach(channelID => {
+                client.guilds
+                  .get(guildID)
+                  .channels.get(channelID)
+                  .sendMessage(
+                    boxMessage(
+                      "**えすごさんのリレーサーバーサーバーの最新状態**\n" +
+                        forSend,
+                      color
+                    )
+                  );
+              });
+          });
+      }
+    });
+  })
+  .listen(3000);
 
 // @botStarts
 client.on("ready", message => {
@@ -31,15 +83,21 @@ client.on("ready", message => {
 
 // @onJoin
 client.on("guildCreate", guild => {
-  guild.systemChannel.sendMessage(
-    boxMessage(INFO_MESSAGE)
-  );
-  sendLog("@RomanGames#4543 " + guild.name + " 鯖に入れられました。");
+  let config = JSON.parse(fs.readFileSync(CONFIG_FILEPATH));
+  config[guild.id] = { channels: new Array() };
+  fs.writeFileSync(CONFIG_FILEPATH, JSON.stringify(config, null, 2));
+  guild.systemChannel.sendMessage(boxMessage(INFO_MESSAGE));
+  sendLog("<@" + ROMANGAMES_ID + "> " + guild.name + " 鯖に入れられました。");
 });
 
 // @onExit
 client.on("guildDelete", guild => {
-  sendLog("@RomanGames#4543 " + guild.name + " 鯖から追い出されました。");
+  let config = JSON.parse(fs.readFileSync(CONFIG_FILEPATH));
+  delete config[guild.id];
+  fs.writeFileSync(CONFIG_FILEPATH, JSON.stringify(config, null, 2));
+  sendLog(
+    "<@" + ROMANGAMES_ID + "> " + guild.name + " 鯖から追い出されました。"
+  );
 });
 
 // @onMessage
@@ -48,20 +106,28 @@ client.on("message", message => {
     // コマンド
     // #est 単体
     if (message.content == PREFIX) {
-      message.channel.sendMessage(
-        boxMessage(INFO_MESSAGE)
-      );
+      message.channel.sendMessage(boxMessage(INFO_MESSAGE));
       return;
     }
-    if (message.content.substr(0, (PREFIX + " ").length) == (PREFIX + " ")) {
-      onCommand(client, message, message.content.substr((PREFIX + " ").length).split(" "));
+    if (message.content.substr(0, (PREFIX + " ").length) == PREFIX + " ") {
+      if (!INSPECTION) {
+        onCommand(
+          client,
+          message,
+          message.content.substr((PREFIX + " ").length).split(" ")
+        );
+      } else {
+        message.channel.sendMessage(
+          "ただ今点検中ですので、\nしばらくしてからもう一度お試しください。"
+        );
+      }
       return;
     }
-    
-    message.reply(
-      PREFIX + "を送ってみてください！"
-    );
-    
+
+    message.mentions.users.forEach(user => {
+      if (user.id == client.user.id)
+        message.reply(PREFIX + "を送ってみてください！");
+    });
   }
 });
 
@@ -74,21 +140,154 @@ function onCommand(client, message, args) {
         boxMessage(
           "**コマンド一覧**\n" +
             "help: これ\n" +
-            "info: このBotについての説明\n"
+            "info: このBotについての説明\n" +
+            "invite: このBotの招待コード\n" +
+            "channel: 通知するチャンネルをいじる(チャンネルをいじれる権限が必要)\n" +
+            "update: 強制的に最新の情報を読み込ませる\n" +
+            "send: 最新の情報を取得"
         )
       );
       success[0] = true;
       break;
     case "info":
-      message.channel.sendMessage(
-        boxMessage(INFO_MESSAGE)
-      );
+      message.channel.sendMessage(boxMessage(INFO_MESSAGE));
       success[0] = true;
       break;
     case "invite":
       message.channel.sendMessage(
-        "招待リンク: https://discord.com/api/oauth2/authorize?client_id=766295251278233641&permissions=781376&scope=bot"
+        "招待リンク: https://discord.com/api/oauth2/authorize?client_id=766295251278233641&permissions=8&scope=bot"
       );
+      success[0] = true;
+      break;
+    case "channel":
+      if (
+        message.guild.members
+          .get(message.author.id)
+          .permissions.has("MANAGE_CHANNELS")
+      ) {
+        success[1] = false;
+        let config = JSON.parse(fs.readFileSync(CONFIG_FILEPATH));
+        switch (args[1]) {
+          case "set":
+            if (
+              config[message.guild.id]["channels"] == undefined ||
+              !config[message.guild.id]["channels"].includes(message.channel.id)
+            ) {
+              config[message.guild.id]["channels"].push(message.channel.id);
+              message.channel.sendMessage(
+                boxMessage(
+                  message.channel.name +
+                    " が通知されるチャンネルに追加されました。"
+                )
+              );
+              onPosted((forSend, sendFlag, ragPoint) => {
+                let color;
+                if (ragPoint == 0) color = getColor(255, 255, 255);
+                else if (ragPoint == 1) color = getColor(255, 255, 128);
+                else if (ragPoint == 2) color = getColor(255, 255, 0);
+                else if (ragPoint == 3) color = getColor(255, 128, 0);
+                else color = getColor(255, 0, 0);
+                message.channel.sendMessage(
+                  boxMessage(
+                    "**えすごさんのリレーサーバーサーバーの最新状態**\n" +
+                      forSend,
+                    color
+                  )
+                );
+              });
+            } else {
+              message.channel.sendMessage(
+                boxMessage("エラー: このチャンネルは既に登録されています。")
+              );
+            }
+            success[1] = true;
+            break;
+          case "remove":
+            if (
+              config[message.guild.id]["channels"] != undefined &&
+              config[message.guild.id]["channels"].includes(message.channel.id)
+            ) {
+              config[message.guild.id]["channels"] = config[message.guild.id][
+                "channels"
+              ].filter(c => c != message.channel.id);
+              message.channel.sendMessage(
+                boxMessage(
+                  message.channel.name +
+                    " が通知されるチャンネルから削除されました。"
+                )
+              );
+            } else {
+              message.channel.sendMessage(
+                boxMessage("エラー: このチャンネルはもともと登録されてません。")
+              );
+            }
+            success[1] = true;
+            break;
+          case "list":
+            let list = "__通知が登録されているチャンネル一覧__: ";
+            if (
+              config[message.guild.id]["channels"] != undefined &&
+              config[message.guild.id]["channels"].length
+            ) {
+              config[message.guild.id]["channels"].forEach(channel => {
+                list +=
+                  "\n" +
+                  client.guilds.get(message.guild.id).channels.get(channel)
+                    .name;
+              });
+            } else {
+              list += "\n通知が登録されているチャンネルはありません。";
+            }
+            message.channel.sendMessage(boxMessage(list));
+            success[1] = true;
+            break;
+        }
+        fs.writeFileSync(CONFIG_FILEPATH, JSON.stringify(config, null, 2));
+        if (!success[1]) {
+          message.channel.sendMessage(
+            boxMessage(
+              "エラー: channelコマンドの使い方が間違っています。\n" +
+                "channelコマンドの使い方:\n" +
+                "  " +
+                PREFIX +
+                " channel [set|remove|list]\n" +
+                "set: これを送ったチャンネルで通知するようにします。\n" +
+                "remove: setの逆で、通知しないようにします。\n" +
+                "list: 通知するチャンネル一覧を表示します。"
+            )
+          );
+        }
+      } else {
+        message.channel.sendMessage(
+          boxMessage(
+            args[0] +
+              ": そのコマンドはチャンネルをいじれる権限がある人しか使えないコマンドです。"
+          )
+        );
+      }
+      success[0] = true;
+      break;
+    case "update":
+      onPosted((forSend, sendFlag) => {
+        message.channel.sendMessage(
+          boxMessage(
+            "最新の情報を読み込みました。\n" +
+              (sendFlag ? "更新がありました。" : "更新はありませんでした。")
+          )
+        );
+      });
+      success[0] = true;
+      break;
+    case "send":
+      onPosted((forSend, sendFlag, ragPoint) => {
+        let color;
+        if (ragPoint == 0) color = getColor(255, 255, 255);
+        else if (ragPoint == 1) color = getColor(255, 255, 128);
+        else if (ragPoint == 2) color = getColor(255, 255, 0);
+        else if (ragPoint == 3) color = getColor(255, 128, 0);
+        else color = getColor(255, 0, 0);
+        message.channel.sendMessage(boxMessage(forSend, color));
+      });
       success[0] = true;
       break;
     case "guilds":
@@ -129,7 +328,89 @@ function onCommand(client, message, args) {
             boxMessage(
               "エラー: channelsコマンドの使い方が間違っています。\n" +
                 "channelsコマンドの使い方:\n" +
-                "  " + PREFIX + " channels <guildId>"
+                "  " +
+                PREFIX +
+                " channels <guildId>"
+            )
+          );
+        }
+        success[0] = true;
+      }
+      break;
+    case "members":
+      if (message.author.id == ROMANGAMES_ID) {
+        success[1] = false;
+        if (args.length >= 2) {
+          let guild = client.guilds.get(args[1]);
+          let forSend = "__`" + guild.name + "` のメンバー一覧__:";
+          guild.members.forEach(member => {
+            forSend +=
+              "\n<"
+            if (member.roles.size > 1) {
+              member.roles.forEach(role => {
+                if (role.name != "@everyone") forSend += role.name + ",";
+              });
+              forSend = forSend.slice(0, -1);
+            }
+            forSend +=
+              "> " +
+              member.user.tag;
+            if (args[2] == "id") forSend += " id: `" + member.user.id + "`"
+          });
+          message.channel.sendMessage(boxMessage(forSend));
+          success[1] = true;
+        }
+        if (!success[1]) {
+          message.channel.sendMessage(
+            boxMessage(
+              "エラー: membersコマンドの使い方が間違っています。\n" +
+                "membersコマンドの使い方:\n" +
+                "  " +
+                PREFIX +
+                " members <guildId>"
+            )
+          );
+        }
+        success[0] = true;
+      }
+      break;
+    case "config":
+      if (message.author.id == ROMANGAMES_ID) {
+        success[1] = false;
+        switch (args[1]) {
+          case "get":
+            message.channel.sendMessage(
+              JSON.stringify(
+                JSON.parse(fs.readFileSync(CONFIG_FILEPATH)),
+                null,
+                2
+              )
+            );
+            success[1] = true;
+            break;
+          case "set":
+            if (args.length > 2) {
+              let forConfig = "";
+              for (let i = 2; i < args.length; i++) {
+                forConfig += args[i] + " ";
+              }
+              fs.writeFileSync(CONFIG_FILEPATH, forConfig);
+              message.channel.sendMessage("設定完了");
+              success[1] = true;
+            }
+            break;
+        }
+        if (!success[1]) {
+          message.channel.sendMessage(
+            boxMessage(
+              "エラー: configコマンドの使い方が間違っています。\n" +
+                "configコマンドの使い方:\n" +
+                "  " +
+                PREFIX +
+                " config get\n" +
+                "  " +
+                PREFIX +
+                " config set <新しいconfig>"
             )
           );
         }
@@ -150,8 +431,171 @@ function onCommand(client, message, args) {
   }
 }
 
-function onPosted() {
-  sendLog("Postされた！");
+function onPosted(callback) {
+  const statusFilePath = "./status.json";
+  const newStatusUrl =
+    "https://files.esugo.net/mcsvrhost/status/api/getstatus/";
+  // download
+  let newStatusJson = "";
+  const req = https
+    .get(newStatusUrl, res => {
+      res.setEncoding("utf8");
+      res.on("data", chunk => {
+        newStatusJson += chunk;
+      });
+      res.on("end", () => {
+        // get status
+        const newStatus = JSON.parse(newStatusJson);
+        const oldStatus = JSON.parse(fs.readFileSync(statusFilePath, "utf8"));
+        // check difference
+        let sendFlag = false;
+        let forSends = new Array();
+        let ragPoint = 0;
+        for (let i = 0; i < oldStatus["servers"].length; i++) {
+          // search
+          let DeletedServer = true;
+          for (let j = 0; j < newStatus["servers"].length; j++) {
+            if (
+              newStatus["servers"][j]["serverDisplayName"] ==
+              oldStatus["servers"][i]["serverDisplayName"]
+            ) {
+              let newStatusStatus = unescape(newStatus["servers"][j]["status"])
+                .replace('<font color="', ":")
+                .replace('">', "_circle: ")
+                .replace("</font>", "");
+              let oldStatusStatus = unescape(oldStatus["servers"][i]["status"])
+                .replace('<font color="', ":")
+                .replace('">', "_circle: ")
+                .replace("</font>", "");
+              let newStatusResponseStatus = unescape(
+                newStatus["servers"][j]["responseStatus"]
+              )
+                .replace('<font color="', ":")
+                .replace('">', "_circle: ")
+                .replace("</font>", "");
+              let oldStatusResponseStatus = unescape(
+                oldStatus["servers"][i]["responseStatus"]
+              )
+                .replace('<font color="', ":")
+                .replace('">', "_circle: ")
+                .replace("</font>", "");
+              // status code
+              let statusCodeForSend;
+              let statusCode = newStatus["servers"][j]["code"];
+              switch (statusCode.split("_")[0]) {
+                case "down":
+                  statusCodeForSend = ":no_entry:";
+                  ragPoint += 2;
+                  break;
+                case "slow":
+                  if (parseInt(statusCode.split("_")[1]) >= 3) {
+                    statusCodeForSend = ":no_entry:";
+                    ragPoint += 2;
+                  } else {
+                    statusCodeForSend = ":warning:";
+                    ragPoint += 1;
+                  }
+                  break;
+                case "full":
+                  if (statusCode.split("_")[1] == "normal")
+                    statusCodeForSend = ":white_check_mark:";
+                  break;
+              }
+              // for send
+              if (
+                newStatusStatus != oldStatusStatus ||
+                newStatusResponseStatus != oldStatusResponseStatus
+              )
+                sendFlag = true;
+              forSends.push(
+                "> " +
+                  statusCodeForSend +
+                  " " +
+                  unescape(newStatus["servers"][j]["serverDisplayName"]) +
+                  "\n" +
+                  (newStatusStatus != oldStatusStatus
+                    ? "<更新>稼働状況: "
+                    : "稼働状況: ") +
+                  newStatusStatus +
+                  "\n" +
+                  (newStatusResponseStatus != oldStatusResponseStatus
+                    ? "<更新>応答速度: "
+                    : "応答速度: ") +
+                  newStatusResponseStatus
+              );
+              DeletedServer = false;
+              break;
+            }
+          }
+          if (DeletedServer) {
+            // deleted server
+            sendFlag = true;
+            forSends.push(
+              "> :heavy_minus_sign: " +
+                unescape(oldStatus["servers"][i]["serverDisplayName"]) +
+                " は無くなりました。"
+            );
+          }
+        }
+        for (let i = 0; i < newStatus["servers"].length; i++) {
+          let newServer = true;
+          for (let j = 0; j < oldStatus["servers"].length; j++) {
+            if (
+              oldStatus["servers"][j]["serverDisplayName"] ==
+              newStatus["servers"][i]["serverDisplayName"]
+            ) {
+              newServer = false;
+              break;
+            }
+          }
+          if (newServer) {
+            // new server
+            let newStatusStatus = unescape(newStatus["servers"][i]["status"])
+              .replace('<font color="', ":")
+              .replace('">', "_circle: ")
+              .replace("</font>", "");
+            let newStatusResponseStatus = unescape(
+              newStatus["servers"][i]["responseStatus"]
+            )
+              .replace('<font color="', ":")
+              .replace('">', "_circle: ")
+              .replace("</font>", "");
+            sendFlag = true;
+            forSends.push(
+              "> :heavy_plus_sign: " +
+                unescape(newStatus["servers"][i]["serverDisplayName"]) +
+                " が追加されました。\n" +
+                "稼働状況: " +
+                newStatusStatus +
+                "\n" +
+                "応答速度: " +
+                newStatusResponseStatus
+            );
+          }
+        }
+        // send
+        let forSend =
+          forSends.reduce((acc, forSend) => acc + forSend + "\n", "") +
+          "\n　　　　最終更新: " +
+          datetostr(
+            new Date(
+              newStatus["updatedTime"] +
+                (new Date().getTimezoneOffset() + 9 * 60) * 60 * 1000
+            ),
+            "MM/DD hh:mm:ss",
+            false
+          ) +
+          "";
+        //sendLog("Postされました\n" + forSend);
+        callback(forSend, sendFlag, ragPoint);
+        // update file
+        fs.writeFileSync(statusFilePath, JSON.stringify(newStatus, null, 2));
+      });
+    })
+    .on("error", e => {
+      sendLog("Error: " + e.message);
+    });
+  req.end();
 }
 
 function sendLog(text) {
@@ -179,7 +623,7 @@ function sendLog(text) {
     );
 }
 
-function boxMessage(message, color = getColor(253, 224, 207)) {
+function boxMessage(message, color = getColor(255, 255, 255)) {
   return {
     embed: {
       color: color,
@@ -190,7 +634,7 @@ function boxMessage(message, color = getColor(253, 224, 207)) {
 function boxMessageWithAuthor(
   message,
   author,
-  color = getColor(253, 224, 207)
+  color = getColor(255, 255, 255)
 ) {
   return {
     embed: {
@@ -202,6 +646,52 @@ function boxMessageWithAuthor(
       }
     }
   };
+}
+
+function datetostr(date, format, is12hours) {
+  var weekday = ["日", "月", "火", "水", "木", "金", "土"];
+  if (!format) {
+    format = "YYYY/MM/DD(WW) hh:mm:ss";
+  }
+  var year = date.getFullYear();
+  var month = date.getMonth() + 1;
+  var day = date.getDate();
+  var weekday = weekday[date.getDay()];
+  var hours = date.getHours();
+  var minutes = date.getMinutes();
+  var secounds = date.getSeconds();
+
+  var ampm = hours < 12 ? "AM" : "PM";
+  if (is12hours) {
+    hours = hours % 12;
+    hours = hours != 0 ? hours : 12;
+  }
+
+  var replaceStrArray = {
+    YYYY: year,
+    Y: year,
+    MM: ("0" + month).slice(-2),
+    M: month,
+    DD: ("0" + day).slice(-2),
+    D: day,
+    WW: weekday,
+    hh: ("0" + hours).slice(-2),
+    h: hours,
+    mm: ("0" + minutes).slice(-2),
+    m: minutes,
+    ss: ("0" + secounds).slice(-2),
+    s: secounds,
+    AP: ampm
+  };
+
+  var replaceStr = "(" + Object.keys(replaceStrArray).join("|") + ")";
+  var regex = new RegExp(replaceStr, "g");
+
+  let ret = format.replace(regex, function(str) {
+    return replaceStrArray[str];
+  });
+
+  return ret; //datetostr(new Date(), 'Y/MM/DD(WW) hh:mm:ss AP', false)
 }
 
 function getColor(red, green, blue) {

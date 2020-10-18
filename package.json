@@ -1,10 +1,11 @@
-﻿{
-  "name": "eaugo-status-bot",
-  "version": "1.0.0",
-  "description": "えすごリレーサーバー稼働状況確認Bot",
+{
+  "name": "glitch-discord-bot",
+  "version": "0.0.0",
+  "description": "discord bot sample on Glitch",
   "main": "main.js",
   "dependencies": {
-    "discord.js": "latest"
+    "discord.js": "latest",
+    "request": "^2.88.2"
   },
   "devDependencies": {},
   "scripts": {

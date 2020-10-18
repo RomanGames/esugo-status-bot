@@ -1,0 +1,48 @@
+{
+  "checking": false,
+  "servers": [
+    {
+      "serverDisplayName": "サーバーセレクター",
+      "status": "<font color=\"green\">正常に稼働</font>",
+      "responseStatus": "<font color=\"green\">正常</font>",
+      "code": "full_normal"
+    },
+    {
+      "serverDisplayName": "通常(共有・無料版)リレーサーバー1 分散ノード 1",
+      "status": "<font color=\"green\">正常に稼働</font>",
+      "responseStatus": "<font color=\"green\">正常</font>",
+      "code": "full_normal"
+    },
+    {
+      "serverDisplayName": "通常(共有・無料版)リレーサーバー1 分散ノード 2",
+      "status": "<font color=\"green\">正常に稼働</font>",
+      "responseStatus": "<font color=\"green\">正常</font>",
+      "code": "full_normal"
+    },
+    {
+      "serverDisplayName": "通常(共有・無料版)リレーサーバー1 分散ノード 3",
+      "status": "<font color=\"green\">正常に稼働</font>",
+      "responseStatus": "<font color=\"green\">正常</font>",
+      "code": "full_normal"
+    },
+    {
+      "serverDisplayName": "有料版リレーサーバー1 分散ノード 1",
+      "status": "<font color=\"green\">正常に稼働</font>",
+      "responseStatus": "<font color=\"green\">正常</font>",
+      "code": "full_normal"
+    },
+    {
+      "serverDisplayName": "有料版リレーサーバー1 分散ノード 2",
+      "status": "<font color=\"green\">正常に稼働</font>",
+      "responseStatus": "<font color=\"green\">正常</font>",
+      "code": "full_normal"
+    },
+    {
+      "serverDisplayName": "有料版リレーサーバー1 分散ノード 3",
+      "status": "<font color=\"green\">正常に稼働</font>",
+      "responseStatus": "<font color=\"green\">正常</font>",
+      "code": "full_normal"
+    }
+  ],
+  "updatedTime": 1602983818776
+}
